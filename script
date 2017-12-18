@@ -1,8 +1,8 @@
 // Donations are welcome & appreciated!: 0x9aEa53364bBaE27Ff83Ce3f2807c8BbcC71a3FC6
 // ==UserScript==
-// @name         Crypto Kitty Info Extension
+// @name         Crypto Kitty Info Extension - Custom
 // @namespace    https://github.com/HaJaeKyung/KittyExtension
-// @version      0.36
+// @version      0.1
 // @description  Adds stat info to the site
 // @author       HaJaeKyung
 // @match        *.cryptokitties.co/*
@@ -162,7 +162,13 @@ $(document).ready(() => {
             // sort cattributes so they are grouped for easier comparison visually
             data.cattributes.sort((a, b) => orderedCattributes.indexOf(a.description) - orderedCattributes.indexOf(b.description));
 
-            finalizeOverlay(data.cattributes, element, stats);
+            let owner = data.owner;
+            if (owner.address == '0xb1690c08e213a35ed9bab7b318de14420fb57d8c') {
+                // kitty is up for auction, owner is technically the auction contract
+                owner = data.auction.seller;
+            }
+
+            finalizeOverlay(data.cattributes, owner, element, stats);
             if (hasLocalStorage) {
                 if (data.children.length === 0) {
                     let ul = element.getElementsByClassName("extWrapper")[0];
@@ -215,7 +221,7 @@ $(document).ready(() => {
         }
     }
 
-    function finalizeOverlay(cattributes, element, stats) {
+    function finalizeOverlay(cattributes, owner, element, stats) {
         let ul = element.getElementsByClassName("extAttUl")[0];
         ul.classList.remove("extBounce");
         ul.innerHTML = "";
@@ -226,6 +232,9 @@ $(document).ready(() => {
                 ul.innerHTML += "<li class='extAtt' style=\'background-color:"+background_color+"; color: "+color+"\'>"+cattributes[x].description+"</li>";
             }
         }
+
+        // show owner's name
+        ul.innerHTML += "<li class='extAtt' style='background-color: rgb(251, 224, 244); color: black;'>" + owner.nickname + "</li>";
 
         //if (window.location.hostname == 'www.cryptokitties.co') {
             //calcPrice(stats.id , cattributes, stats, element);
