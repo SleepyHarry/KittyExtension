@@ -1,10 +1,10 @@
 // Donations are welcome & appreciated!: 0x9aEa53364bBaE27Ff83Ce3f2807c8BbcC71a3FC6
 // ==UserScript==
 // @name         Crypto Kitty Info Extension - Custom
-// @namespace    https://github.com/HaJaeKyung/KittyExtension
+// @namespace    https://github.com/SleepyHarry/KittyExtension
 // @version      0.1
 // @description  Adds stat info to the site
-// @author       HaJaeKyung
+// @author       HaJaeKyung / SleepyHarry
 // @match        *.cryptokitties.co/*
 // @match        *kittytools.herokuapp.com/*
 // @match        *kittygenerations.herokuapp.com/*
