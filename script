@@ -163,8 +163,10 @@ $(document).ready(() => {
             data.cattributes.sort((a, b) => orderedCattributes.indexOf(a.description) - orderedCattributes.indexOf(b.description));
 
             let owner = data.owner;
-            if (owner.address == '0xb1690c08e213a35ed9bab7b318de14420fb57d8c') {
-                // kitty is up for auction, owner is technically the auction contract
+            if (
+                    owner.address == '0xb1690c08e213a35ed9bab7b318de14420fb57d8c' || owner.address == '0xc7af99fe5513eb6710e6d5f44f9989da40f27f26'
+            ) {
+                // kitty is up for auction (sell or sire), owner is technically the auction contract (sell for 0xb..., sire for 0xc...)
                 owner = data.auction.seller;
             }
 
