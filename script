@@ -2,7 +2,7 @@
 // ==UserScript==
 // @name         Crypto Kitty Info Extension - Custom
 // @namespace    https://github.com/SleepyHarry/KittyExtension
-// @version      0.2
+// @version      0.2.1
 // @description  Adds stat info to the site
 // @author       HaJaeKyung / SleepyHarry
 // @match        *.cryptokitties.co/*
@@ -17,8 +17,8 @@ $(document).ready(() => {
     console.log('CryptoKitties Extension Loaded');
     $("head").append("<style> .extAttUl { overflow: visible; z-index: 3;  padding: 0px; margin: 0px; } </style>");
     $("head").append("<style> .extAtt { position: relative; min-width: 75px; padding-left: 2px; padding-right: 2px; color: rgba(255,255,255, 0.99); text-align: center; line-height: 1.85rem; font-size: 1.6rem; border-style: solid; border-color: rgba(66, 66, 66, 0.35); border-width: 1.5px; border-radius: 20px; background-color: #00bcd4; } </style>");
-    $("head").append("<style> .extAttUl .extAtt { padding-left: calc(2px + 2rem); } </style>");
-    $("head").append('<style> .extAttUl .extAtt:before { position: absolute; top: 50%; left: 0.5rem; width: 1.5rem; height: 1.5rem; background-position: 50%; background-repeat: no-repeat; background-size: 100% auto; /* background-image: url(/icons/type-common.svg); */ -webkit-transform: translateY(-50%); transform: translateY(-50%); content: ""; } </style>');
+    $("head").append("<style> .extWithIcon { padding-left: calc(2px + 2rem); } </style>");
+    $("head").append('<style> .extWithIcon:before { position: absolute; top: 50%; left: 0.5rem; width: 1.5rem; height: 1.5rem; background-position: 50%; background-repeat: no-repeat; background-size: 100% auto; /* background-image: url(/icons/type-common.svg); */ -webkit-transform: translateY(-50%); transform: translateY(-50%); content: ""; } </style>');
     $("head").append("<style> .extBounce {animation: mover 1s infinite  alternate; padding-right: 2px;} @keyframes mover {0% { transform: translateY(0); }100% { transform: translateY(-6px); } </style>");
     $("head").append("<style> .extWrapper {position:absolute; bottom: 0; right: 0; display: flex; flex-direction: row-reverse; align-items: flex-end; } </style>");
     $("head").append("<style> .extUSD {  padding-top: 1px; transition: 0.5s; overflow:hidden; width: 140px; height: 22px; z-index: 100; position:absolute; top:0; left:0; box-shadow: 0 3px rgba(143, 141, 138, 0.6); border-width: 0.5px; background-color: #dff7f1; color:rgba(0,0,0, 0.76); padding-left: 4px; padding-right: 4px; } </style>");
@@ -233,7 +233,7 @@ $(document).ready(() => {
             if (cattributes[x]) {
                 let background_color = getColor(cattributes[x].description)[0];
                 let color = background_color == 'white' ? 'rgba(0,0,0, 0.76)' : 'rgba(255,255,255, 0.98)';
-                ul.innerHTML += "<li class='extAtt ListAttributes-item--" + cattributes[x].type + "' style=\'background-color:"+background_color+"; color: "+color+"\'>"+cattributes[x].description+"</li>";
+                ul.innerHTML += "<li class='extAtt extWithIcon ListAttributes-item--" + cattributes[x].type + "' style=\'background-color:"+background_color+"; color: "+color+"\'>"+cattributes[x].description+"</li>";
             }
         }
 
