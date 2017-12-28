@@ -2,7 +2,7 @@
 // ==UserScript==
 // @name         Crypto Kitty Info Extension - Custom
 // @namespace    https://github.com/SleepyHarry/KittyExtension
-// @version      0.3.0
+// @version      0.3.1
 // @description  Adds stat info to the site
 // @author       HaJaeKyung / SleepyHarry
 // @match        *.cryptokitties.co/*
@@ -34,6 +34,7 @@ $(document).ready(() => {
     $("head").append("<style> .extRarityList { display:block; } </style>");
     $("head").append("<style> .extArrowUp {  margin-left: 2px; margin-top: 7px; float: right; border: solid #00cc00; border-width: 0 3px 3px 0; display: inline-block; padding: 3px; transform: rotate(-135deg); -webkit-transform: rotate(-135deg);} </style>");
     $("head").append("<style> .extArrowDown {  margin-left: 2px; margin-top: 6px; float: right; border: solid Red; border-width: 0 3px 3px 0; display: inline-block; padding: 3px; transform: rotate(45deg); -webkit-transform: rotate(45deg);} </style>");
+    $("head").append("<style> .extFindSimilar { position: absolute; top: 7.2rem; right: 0; z-index: 3; } </style>");
     $("body").append("<ul class='extPercentList '></ul>");
 
     const version = "0.38";
@@ -325,154 +326,6 @@ $(document).ready(() => {
         }
     }, 2000);
 
-    /*function calcPrice(id, cattributes, stats, element) {
-        let base = "https://api.cryptokitties.co/auctions";
-        let query = "?type=sale&limit=15&sorting=cheap&orderBy=current_price&orderDirection=asc&sorting=cheap&status=open&search=";
-        let totalGen = ' gen:'+stats.gen;
-        if (stats.gen >= 10) {
-            totalGen += ' gen:'+(stats.gen-1)+' gen:';
-            totalGen += parseInt(stats.gen)+1;
-        }
-        let rareTbl = getBestRares(cattributes);
-        let search = totalGen + rareTbl[0];
-
-        function finishPrice(data, index) {
-            let newMultiplier = stats.id == data.auctions[index].kitty.id ? 1 : rareTbl[1];
-            let nomralizePrice = data.auctions[index].current_price/1000000000000000000;
-            return (nomralizePrice*newMultiplier).toFixed(2);
-        }
-        $.getJSON( base+query+search, (data) => {
-            if (data.total > 0) {
-                if (data.total == 1) {
-                    if (data.auctions[0].kitty.id == id) {
-                        renderPrice(element, 'Name your price', query + search, false);
-                    } else {
-                        renderPrice(element, finishPrice(data, 0), query + search, true);
-                    }
-                } else {
-                    let cdTbl = ["Fast", "Swift", "Snappy", "Brisk", "Plodding", "Slow", "Sluggish", "Catatonic"];
-                    let cdValueTbl = ["Fast","Swift","Swift","Snappy","Snappy","Brisk","Brisk","Plodding","Plodding","Slow","Slow","Sluggish","Sluggish","Catatonic"];
-                    for (let x in data.auctions) {
-                        let cdValue = cdTbl.indexOf(cdValueTbl[data.auctions[x].kitty.status.cooldown_index]);
-                        if (stats.cd && stats.fast > 1) {
-                            renderPrice(element, finishPrice(data, x), query + search, false);
-                            return;
-                        } else if (stats.fast > 4 ||  stats.fast >= cdValue) {
-                            renderPrice(element, finishPrice(data, x), query + search, false);
-                            return;
-                        } else if (stats.cd && data.auctions[x].kitty.status.is_ready) {
-                            renderPrice(element, finishPrice(data, x), query + search, false);
-                            return;
-                        } if (x == data.auctions.length - 1) {
-                            renderPrice(element, finishPrice(data, x), query + search, true);
-                            return;
-                        }
-                    }
-
-
-                }
-            } else {
-                renderPrice(element, 'Name your price', query + search, false);
-            }
-        }).fail(() => {
-
-        });
-    }
-
-    function renderPrice(element, price, url, fast) {
-        if (price >= 50) {
-            price = Math.ceil(price / 10) * 10;
-            price += '+';
-        } else if (fast) {
-            price += '+';
-        }
-        let ul = element.getElementsByClassName("extWrapper")[0];
-        ul.innerHTML += "<ul class='extAttUl' onclick='searchSimilarKitties(event, &quot;"+ url +"&quot;)'><li style='list-style: none;' class='extAtt'><span style='font-weight: 500;'>Score:</span> " + price + "</li></ul>";
-    }
-
-    function getBestRares(cattributes, adjust) {
-        let newCatts = [];
-        for (let single in cattributes) {
-            newCatts.push(cattributes[single].description);
-        }
-        cattributes = newCatts;
-        let best = '';
-        let hasRare = false;
-        let count = adjust || 0;
-
-        if (cattributes.length === 0) {
-            hasRare = ' type:fancy';
-        }
-        for (let x in cattributes) {
-            if (!tbl[cattributes[x]]) {
-                best += ' ' + x;
-                count += 3;
-                hasRare = ' ' + x;
-            }
-        }
-        let score = 0;
-        let multiplier = 1;
-        let multCount = 0;
-        for (let key1 in tbl) {
-            if (tbl[key1].count) {
-                for (let key in cattributes) {
-                    if (tbl[key1].count <= 0.4) {
-                        multiplier *= 1.55;
-                    } else if(tbl[key1].count <= 1.8) {
-                        multiplier *= 1.25;
-                    } else if (tbl[key1].count <= 5) {
-                        multiplier *= 1.05;
-                    } else if (tbl[key1].count <= 10) {
-                        multiplier *= 1.025;
-                    }
-                }
-            }
-        }
-        console.log(multiplier);
-        for (let key in tbl) {
-            if (cattributes.includes(key)) {
-                if (tbl[key].count <= 1.2) {
-                } else if (tbl[key].count <= 6) {
-                }
-            }
-            if (count >= 3) {
-                return [' ' + best, multiplier];
-            }
-        }
-        let attrCount = 0;
-        cattributes.forEach((key)=>{
-            if (tbl[key]) {
-                if (tbl[key].count <= 0.4) {
-                    attrCount += 3;
-                } else if(tbl[key].count <= 1.8) {
-                    attrCount += 2;
-                } else if (tbl[key].count <= 5) {
-                    attrCount += 1;
-                } else if (tbl[key].count <= 10) {
-                    attrCount += 1;
-                } else {
-                    score += 0;
-                }
-            } else {
-                attrCount += 5;
-            }
-            score = ((attrCount/6)*7)+1;
-            console.log(score);
-            if (cattributes.length === 0) {
-                score = 8;
-            } else if (cattributes.length > 8) {
-                score -= cattributes.length - 8;
-            }
-        });
-            console.log('score',score);
-        return score;
-    }*/
-
-    document.searchSimilarKitties = (e, query) => {
-        e.preventDefault();
-        window.location.href = "https://www.cryptokitties.co/marketplace/sale" + query;
-    };
-
     function changePrices() {
         let items = document.getElementsByClassName('KittyStatus-itemText');
         if (ethPrice && items.length > 0 && document.getElementsByClassName('extUSD').length > 0) {
@@ -667,4 +520,43 @@ $(document).ready(() => {
 
     getTotal();
     getCattributes();
+
+    if (location.pathname.startsWith('/kitty/')) {
+        // on a kitty detail page, add a button to search the market for similar kitties
+
+        // wait for the kitty "banner" to load
+        const findSimilarButtonIntervalId = setInterval(
+            () => {
+                if ($('.KittyBanner-container').length === 0) { return; }  // bail if the banner doesn't exist yet
+                clearInterval(findSimilarButtonIntervalId);
+
+                // get "this" kitty first
+                const kittyId = location.pathname.match(/\/kitty\/(\d+)/)[1];
+
+                // make a button to go straight to market
+                $('.KittyBanner-container').append($('<div class="extFindSimilar"><svg id="find-similar" class="KittyBanner-shareBtn" width="40" height="41" viewBox="0 0 40 41" xmlns="http://www.w3.org/2000/svg"><g fill="none" fill-rule="evenodd"><circle fill="#FFF" opacity=".399" cx="20" cy="20.541" r="20"/><g xmlns="http://www.w3.org/2000/svg" transform="translate(13.4 29.35)" stroke="#2A2825" stroke-width="1.5" fill="#2A2825"><text style="font-size: xx-large;">~</text></g></svg></div>'));
+
+                fetch('https://api.cryptokitties.co/kitties/' + kittyId)
+                    .then(res => res.json())
+                    .then(j => {
+                        // given a kitty, find similar in the market
+                        // for now, we define "similar" to mean other kitties for sale with the same rarest two cattributes, and the same generation
+
+                        let cattributes = j.cattributes;
+                        let flatCattributesByRarity = dataCattributes.map(c => c.description);
+                        cattributes.sort((a, b) => flatCattributesByRarity.indexOf(a.description) - flatCattributesByRarity.indexOf(b.description));
+
+                        let topTwo = [cattributes[0].description, cattributes[1].description];
+
+                        $('#find-similar').click((e) => {
+                            window.open(
+                                `https://www.cryptokitties.co/marketplace/sale?orderBy=current_price&orderDirection=asc&search=${topTwo[0]}%20${topTwo[1]}%20gen%3A${j.generation}`,
+                                e.metaKey ? '_blank' : '_self'
+                            );
+                        });
+                    });
+            },
+            1000
+        );
+    }
 });
