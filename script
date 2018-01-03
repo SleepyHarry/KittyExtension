@@ -68,6 +68,23 @@ $(document).ready(() => {
         });
     }, true);
 
+    // patch the history object to emit an "event" of sorts when the location changes via the history API (common with React)
+    // adapted from https://stackoverflow.com/a/4585031/5022115 - thx
+    (function(history){
+        var pushState = history.pushState;
+        history.pushState = function(state) {
+            if (typeof history.onpushstate === 'function') {
+                history.onpushstate({state});
+            }
+            const result = pushState.apply(history, arguments);
+            if (typeof history.afterpushstate === 'function') {
+                history.afterpushstate({state});
+            }
+
+            return result;
+        };
+    })(window.history);
+
     let tblNew = {"Genesis":{"count":' (One)'},"BugCat":{"count":' (Three)'},"Mistletoe":{"count":0.009},"Dracula":{"count":0.062},"ShipCat":{"count":0.2194},"DuCat":{"count":1.0496}};
     let tbl = JSON.parse(localStorage.getItem('kittyExtensionOldTbl'));
     let defaultTblStorage = false;
@@ -521,42 +538,44 @@ $(document).ready(() => {
     getTotal();
     getCattributes();
 
-    if (location.pathname.startsWith('/kitty/')) {
-        // on a kitty detail page, add a button to search the market for similar kitties
+    history.afterpushstate = () => {
+        if (location.pathname.startsWith('/kitty/')) {
+            // on a kitty detail page, add a button to search the market for similar kitties
 
-        // wait for the kitty "banner" to load
-        const findSimilarButtonIntervalId = setInterval(
-            () => {
-                if ($('.KittyBanner-container').length === 0) { return; }  // bail if the banner doesn't exist yet
-                clearInterval(findSimilarButtonIntervalId);
+            // wait for the kitty "banner" to load
+            window.findSimilarButtonIntervalId = setInterval(
+                () => {
+                    if ($('.KittyBanner-container').length === 0) { return; }  // bail if the banner doesn't exist yet
+                    clearInterval(window.findSimilarButtonIntervalId);
 
-                // get "this" kitty first
-                const kittyId = location.pathname.match(/\/kitty\/(\d+)/)[1];
+                    // get "this" kitty first
+                    const kittyId = location.pathname.match(/\/kitty\/(\d+)/)[1];
 
-                // make a button to go straight to market
-                $('.KittyBanner-container').append($('<div class="extFindSimilar"><svg id="find-similar" class="KittyBanner-shareBtn" width="40" height="41" viewBox="0 0 40 41" xmlns="http://www.w3.org/2000/svg"><g fill="none" fill-rule="evenodd"><circle fill="#FFF" opacity=".399" cx="20" cy="20.541" r="20"/><g xmlns="http://www.w3.org/2000/svg" transform="translate(13.4 29.35)" stroke="#2A2825" stroke-width="1.5" fill="#2A2825"><text style="font-size: xx-large;">~</text></g></svg></div>'));
+                    // make a button to go straight to market
+                    $('.KittyBanner-container').append($('<div class="extFindSimilar"><svg id="find-similar" class="KittyBanner-shareBtn" width="40" height="41" viewBox="0 0 40 41" xmlns="http://www.w3.org/2000/svg"><g fill="none" fill-rule="evenodd"><circle fill="#FFF" opacity=".399" cx="20" cy="20.541" r="20"/><g xmlns="http://www.w3.org/2000/svg" transform="translate(13.4 29.35)" stroke="#2A2825" stroke-width="1.5" fill="#2A2825"><text style="font-size: xx-large;">~</text></g></svg></div>'));
 
-                fetch('https://api.cryptokitties.co/kitties/' + kittyId)
-                    .then(res => res.json())
-                    .then(j => {
-                        // given a kitty, find similar in the market
-                        // for now, we define "similar" to mean other kitties for sale with the same rarest two cattributes, and the same generation
+                    fetch('https://api.cryptokitties.co/kitties/' + kittyId)
+                        .then(res => res.json())
+                        .then(j => {
+                            // given a kitty, find similar in the market
+                            // for now, we define "similar" to mean other kitties for sale with the same rarest two cattributes, and the same generation
 
-                        let cattributes = j.cattributes;
-                        let flatCattributesByRarity = dataCattributes.map(c => c.description);
-                        cattributes.sort((a, b) => flatCattributesByRarity.indexOf(a.description) - flatCattributesByRarity.indexOf(b.description));
+                            let cattributes = j.cattributes;
+                            let flatCattributesByRarity = dataCattributes.map(c => c.description);
+                            cattributes.sort((a, b) => flatCattributesByRarity.indexOf(a.description) - flatCattributesByRarity.indexOf(b.description));
 
-                        let topTwo = [cattributes[0].description, cattributes[1].description];
+                            let topTwo = [cattributes[0].description, cattributes[1].description];
 
-                        $('#find-similar').click((e) => {
-                            window.open(
-                                `https://www.cryptokitties.co/marketplace/sale?orderBy=current_price&orderDirection=asc&search=${topTwo[0]}%20${topTwo[1]}%20gen%3A${j.generation}`,
-                                e.metaKey ? '_blank' : '_self'
-                            );
+                            $('#find-similar').click((e) => {
+                                window.open(
+                                    `https://www.cryptokitties.co/marketplace/sale?orderBy=current_price&orderDirection=asc&search=${topTwo[0]}%20${topTwo[1]}%20gen%3A${j.generation}`,
+                                    e.metaKey ? '_blank' : '_self'
+                                );
+                            });
                         });
-                    });
-            },
-            1000
-        );
+                },
+                1000
+            );
+        }
     }
 });
