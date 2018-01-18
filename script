@@ -2,7 +2,7 @@
 // ==UserScript==
 // @name         Crypto Kitty Info Extension - Custom
 // @namespace    https://github.com/SleepyHarry/KittyExtension
-// @version      0.3.1
+// @version      0.4
 // @description  Adds stat info to the site
 // @author       HaJaeKyung / SleepyHarry
 // @match        *.cryptokitties.co/*
@@ -12,6 +12,8 @@
 // @require      https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/6.18.2/babel.js
 // @require      http://code.jquery.com/jquery-3.2.1.min.js
 // ==/UserScript==
+
+const ETHERSCAN_API_KEY = '<YOUR_API_KEY_HERE>';
 
 $(document).ready(() => {
     console.log('CryptoKitties Extension Loaded');
@@ -37,7 +39,7 @@ $(document).ready(() => {
     $("head").append("<style> .extFindSimilar { position: absolute; top: 7.2rem; right: 0; z-index: 3; } </style>");
     $("body").append("<ul class='extPercentList '></ul>");
 
-    const version = "0.38";
+    const version = "0.4";
     let orderedCattributes = [];
     let foundId = [];
     let curCat = 'n/a';
@@ -85,6 +87,76 @@ $(document).ready(() => {
         };
     })(window.history);
 
+    const CRYPTOKITTIES_CORE_CONTRACT_ADDRESS = '0x06012c8cf97bead5deae237070f9587f8e7a266d';
+    const KAI_DIGITS = '123456789abcdefghijkmnopqrstuvwx';
+
+    const CATTR_TYPE_CLASSES = [
+        'unknown--1',
+        'unknown--2',
+        'unknown--3',
+        'mouth',
+        'wild',
+        'color',
+        'color',
+        'colorbody',
+        'eyes',
+        'coloreyes',
+        'pattern',
+        'body',
+    ];
+
+    const rawGenesToKai = (genes) => {
+        const kai = new web3.BigNumber(genes)
+            .toString(32)
+            .split('').map(c => KAI_DIGITS[parseInt(c, 32)]);
+
+        let bunched = [];
+        for (let i = 0; i < 12 * 4; i += 4) {
+            bunched.push(kai.slice(i, i + 4).join(''));
+        }
+
+        return bunched;
+    };
+
+    let getGenes;
+    window.ETHERSCAN_API_USABLE = true;  // keeps track of cooldown
+    fetch(
+        `https://api.etherscan.io/api` +
+        `?module=contract` +
+        `&action=getabi` +
+        `&address=${CRYPTOKITTIES_CORE_CONTRACT_ADDRESS}` +
+        `&apikey=${ETHERSCAN_API_KEY}`
+    )
+        .then(res => res.json())
+        .then(j => {
+            if (j.status === '1') {
+                return JSON.parse(j.result);
+            }
+
+            throw j.message;
+        })
+        .then(abi => {
+            const cryptoCoreContract = web3.eth.contract(abi);
+            const contractInstance = cryptoCoreContract.at(CRYPTOKITTIES_CORE_CONTRACT_ADDRESS);
+
+            getGenes = (kittyID) => {
+                return new Promise((resolve, reject) => {
+                    if (!window.ETHERSCAN_API_USABLE) {
+                        reject('no ready yet!');  // TODO: Queue the request instead of just bricking
+                    }
+                    contractInstance.getKitty(kittyID, (error, result) => {
+                        if (error) {
+                            reject(error);
+                        }
+
+                        resolve(result[9]);
+                    });
+                    window.ETHERSCAN_API_USABLE = false;
+                    setTimeout(() => { window.ETHERSCAN_API_USABLE = true; }, 500);
+                });
+            };
+        });
+
     let tblNew = {"Genesis":{"count":' (One)'},"BugCat":{"count":' (Three)'},"Mistletoe":{"count":0.009},"Dracula":{"count":0.062},"ShipCat":{"count":0.2194},"DuCat":{"count":1.0496}};
     let tbl = JSON.parse(localStorage.getItem('kittyExtensionOldTbl'));
     let defaultTblStorage = false;
@@ -131,12 +203,13 @@ $(document).ready(() => {
 
     if (window.location.hostname == 'www.cryptokitties.co') {
         let checked = localStorage.getItem('kittyExtensionRarityToggle') || 'true';
+        let geneMode = localStorage.getItem('kittyExtensionGeneMode') || 'false';
         if (checked == 'true') {
             document.getElementsByClassName('extPercentList')[0].style = "display:block;";
         } else {
             document.getElementsByClassName('extPercentList')[0].style = "display:none;";
         }
-        $("body").append("<button onclick='openMenu(event)' id='extMenuButton' class='extUSD extAtt'><div class='extUSDInner'><span style='float:left; padding-left: 4px;'>⚙️ Kitty Extension</span><div id='extMenuCloseButton' class='extX' onclick='closeMenu(event)'>✖️</div><br><br><input type='checkbox' id='rarityToggle' onclick='rarityShowToggle(event)' "+(checked == 'true' ? 'checked' : '')+"> Show Rarity List<br></div></button>");
+        $("body").append("<button onclick='openMenu(event)' id='extMenuButton' class='extUSD extAtt'><div class='extUSDInner'><span style='float:left; padding-left: 4px;'>⚙️ Kitty Extension</span><div id='extMenuCloseButton' class='extX' onclick='closeMenu(event)'>✖️</div><br><br><input type='checkbox' id='rarityToggle' onclick='rarityShowToggle(event)' "+(checked == 'true' ? 'checked' : '')+"> Show Rarity List<br><input type='checkbox' id='geneModeToggle' onclick='geneModeToggle(event)' "+(geneMode == 'true' ? 'checked' : '')+"> Gene mode<br></div></button>");
     }
 
     $.get("https://api.coinmarketcap.com/v1/ticker/ethereum/", data => {
@@ -184,30 +257,38 @@ $(document).ready(() => {
 
             let owner = data.owner;
             if (
-                    owner.address == '0xb1690c08e213a35ed9bab7b318de14420fb57d8c' || owner.address == '0xc7af99fe5513eb6710e6d5f44f9989da40f27f26'
+                owner.address === '0xb1690c08e213a35ed9bab7b318de14420fb57d8c' || // sell
+                owner.address === '0xc7af99fe5513eb6710e6d5f44f9989da40f27f26'    // sire
             ) {
                 // kitty is up for auction (sell or sire), owner is technically the auction contract (sell for 0xb..., sire for 0xc...)
                 owner = data.auction.seller;
             }
 
-            finalizeOverlay(data.cattributes, owner, element, stats);
-            if (hasLocalStorage) {
-                if (data.children.length === 0) {
-                    let ul = element.getElementsByClassName("extWrapper")[0];
-                    if (ul) {
-                        ul.innerHTML += "<ul class='extAttUl'><li style='list-style: none;' class='extAtt'><span style='font-weight: 500;'>&nbsp;virgin&nbsp;</span></li></ul>";
+            let geneMode = localStorage.getItem('kittyExtensionGeneMode') || 'false';
+            if (geneMode === 'true') {
+                getGenes(stats.id).then(rawGenesToKai).then(kaiGenes =>
+                    finalizeGenesOverlay(kaiGenes, owner, element, stats)
+                );
+            } else {
+                finalizeOverlay(data.cattributes, owner, element, stats);
+                if (hasLocalStorage) {
+                    if (data.children.length === 0) {
+                        let ul = element.getElementsByClassName("extWrapper")[0];
+                        if (ul) {
+                            ul.innerHTML += "<ul class='extAttUl'><li style='list-style: none;' class='extAtt'><span style='font-weight: 500;'>&nbsp;virgin&nbsp;</span></li></ul>";
+                        }
                     }
-                }
 
-                if (!data.status.is_ready) {
-                    let note = element.getElementsByClassName('KittyStatus-note');
-                    if (note.length !== 0) {
-                        let cd = (((data.status.cooldown - Date.now())/6000/600));
-                        let time = timeDisplay(cd * 3600);
-                        note[note[1] ? 1 : 0].textContent = time;
+                    if (!data.status.is_ready) {
+                        let note = element.getElementsByClassName('KittyStatus-note');
+                        if (note.length !== 0) {
+                            let cd = (((data.status.cooldown - Date.now())/6000/600));
+                            let time = timeDisplay(cd * 3600);
+                            note[note[1] ? 1 : 0].textContent = time;
+                        }
                     }
+                    saveStorage(stats.id, data.cattributes);
                 }
-                saveStorage(stats.id, data.cattributes);
             }
         }).fail(() => {
             //let ul = element.getElementsByClassName("extAttUl")[0];
@@ -261,6 +342,18 @@ $(document).ready(() => {
         //if (window.location.hostname == 'www.cryptokitties.co') {
             //calcPrice(stats.id , cattributes, stats, element);
         //}
+    }
+
+    function finalizeGenesOverlay(kaiGenes, owner, element, stats) {
+        let ul= element.getElementsByClassName('extAttUl')[0];
+        ul.classList.remove('extBounce');
+        ul.innerHTML = '';
+        for (let [i, chunk] of kaiGenes.entries()) {
+            ul.innerHTML += `<li class="extAtt extWithIcon ListAttributes-item--${CATTR_TYPE_CLASSES[i]}" style="background-color: #ffffff; color: #000000">${chunk}</li>`;
+        }
+
+        // show owner's name
+        ul.innerHTML += "<li class='extAtt' style='background-color: rgb(251, 224, 244); color: black;'>" + owner.nickname + "</li>";
     }
 
     function isValidId(id) {
@@ -395,6 +488,11 @@ $(document).ready(() => {
             document.getElementsByClassName('extPercentList')[0].style = "display:none;";
         }
         localStorage.setItem('kittyExtensionRarityToggle', checked);
+    };
+
+    document.geneModeToggle = (e) => {
+        let checked = document.getElementById('geneModeToggle').checked;
+        localStorage.setItem('kittyExtensionGeneMode', checked);
     };
 
     document.extSearch = (value) => {
@@ -578,4 +676,5 @@ $(document).ready(() => {
             );
         }
     }
+    history.afterpushstate();
 });
